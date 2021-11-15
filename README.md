@@ -1,34 +1,34 @@
 # Project Title
 
-This is the Financial Planner Application for challenge 5! The first part of the applications pulls in current pricing data
-for Bitcoin and Ethereum. I have a theoretical holding of each coin, and I calculate the individual as well as combined
-holding values of my crypto currency position.
+This is the Crypto clustering application for challenge 10! Always been a big fan of statistics.
 
-For the second part of the application I pull in the most recent closing price (2021-10-08 at the time of this writing) for an equity and bond fund.  I use an Alpaca SDK call to do that. I then assume I have 110 shares of the equity fund and 200 for the bond fund.
-I calculate the value of my equity and bond portfolio holdings, and then sum this value to my crypto currency holding value from the first part. After I calculate the individual pieces of the total portfolio I plot a pie chart showing the breakdown of the holdings.
+The application begins by pulling in a CSV file with crypto market data and checking out the first few rows.
+I then run a summary statistic describe function on the data, and also plot the data to see how it looks for the different time periods that are in the CSV file.  So far so good.
 
-I now multiply my monthly income by 3 and call that my emergency fund. I compare it to the value of my current holdings. If my holdings are greater than or equal to my emergency fund, I am happy. If my emergency fund goals are greater than my current holdings, I take a difference and let the user know how many dollars short I am from being able to fully fund my emergency fund.
+After the above is done the fun begins. I run a fit_transform function on the data to turn everything into a mean 0 and variance 1 scaled datapoint, and I turn it into a dataframe and put the crypto currency names as the index of the dataframe. This index column I call "coin_id".  Now with the data scaled, I initialize a list from 0 to 10, called k, and I create an empty list called inertia.
+From there I run a for loop over all the values of k and I fit the KMeans model for all the possible values of k I created.
+This gives me 10 inertia values which I pair together with the corresponding k value in a dictionary, and I graph the dictionary after turning it into a dataframe. By examining the graph I can see after which value of k the inertia has the least amount of change to it. This is the value of k that corresponds to the ideal value of k needed for the number of clusters for the KMean value model to run as ideally as possible.
 
-The next step in the application is assume a 40% / 60% weighting between the bond and equity holdings and run a monte carlo
-simulation for 30 years and calculate the 95% confidence interval of where the monthly income of 12000 could possibly take us.
+Now I get to cluster the crypto data with everything I just did above!  I initialize an instance of the KMean model with 4 clusters based on what was done above.  I run a predict function on the scaled crypto data to group the data based on the built-in model.
+After this is done I create a copy of the original scaled data and add a new column with these new predict values that I got for each crypto currency.  From there I run an hv scatterplot and the clustering can be seen. Very exciting so far!
 
- I run the same analysis as above but for 10 years and assuming a 20% / 80% weighting in favor of equity holdings.
-After that I answer the question if it is possible for the client to retire in 10 years versus 30 years by changing the weighting
-of their portfolio toward a more aggressive 80% equity favored distribution versus just 60%.
+Now is when I get deep into it! The next step is to optimize the clustering by invoking the PCA method.  I instantiate an instance of the PCA model and pick three components.  I run the fit_transform function on the scaled crypto data and then run explained_variance_ratio_ on the data to see how much the three components explain the changes in the data as a whole. Turns out the three components do a pretty good job and explain nearly 90% of the variation in the data!
 
-Even with a more aggressive 20/80 split of the portfolio for 10 years, the possible returns just don't come close to the 40/60 split over 30 years.  More so that the allocation breakdown, the time really seems to be what makes the difference in how explosive the resulting value of a portfolio can be.
+After the above is complete I create a new dataframe with this data and label the columns PC1, PC2, and PC3. I append the original
+"coin_id" column to the dataframe and make it the index.  From here I do a very similar thing as above: I create a list of values for the KMean model from 0 to 11, labelling the variable k_pca.  I initialize an empty list called inertia_pca. I run a for loop where I run a fit function on the PCA crypto data I created in the previous paragraph.  After that I throw the calculated inertia_pca numbers with the corresponding k_pca values into a dictionary. After that I put the values into a dataframe and run an hvplot on everything.  From here I am able to visualize the elbow curve now but with the PCA slightly altered numbers. I get the same value as above with k = 4, but I think the value of 4 is more definite in this case. In the first elbow curve it was possible that k = 5 would work as well.
 
+The final part is now running the KMean value clustering model on the PCA data!  Just like before I instantiate an instance of the KMean model with four clusters. I run a fit function and a predict function on the crypto PCA data.  From there I append the new predicted values on the datafram I had created with the columns PC1, PC2, and PC3.  Finally, I plot the crypto PCA data using an hv scatterplot. Very exciting! You can clearly see how running the PCA algorithm has essentially put the data through a sort of rotation
+matrix and now everything is rescaled as a result.
+
+In doing the comparison, one can see using fewer features to run the KMean model only simplifes the clustering and makes how the data reacts to the two main principal components very clear.
 
 ## Story
 
-You’ll create two financial analysis tools by using a single Jupyter notebook:
+In this Challenge, you’ll combine your financial Python programming skills with the new unsupervised learning skills that you acquired in this module.
 
-A financial planner for emergencies. The members will be able to use this tool to visualize their current savings. The members can then determine if they have enough reserves for an emergency fund.
+You’ll create a Jupyter notebook that clusters cryptocurrencies by their performance in different time periods. You’ll then plot the results so that you can visually show the performance to the board.
 
-A financial planner for retirement. This tool will forecast the performance of their retirement portfolio in 30 years. To do this, the tool will make an Alpaca API call via the Alpaca SDK to get historical price data for use in Monte Carlo simulations.
-
-You’ll use the information from the Monte Carlo simulation to answer questions about the portfolio in your Jupyter notebook.
-
+The CSV file that’s provided for this Challenge contains the price change data of cryptocurrencies in different periods.
 
 ---
 
@@ -36,8 +36,11 @@ You’ll use the information from the Monte Carlo simulation to answer questions
 
 I am using python version 3.7.10 and am importing the following from the built-in libraries and from functions i've created myself:
 import pandas as pd
-from pathlib import Path
-%matplotlib inline
+import hvplot.pandas
+from path import Path
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 ---
 
@@ -53,10 +56,8 @@ webpage that launches.
 
 ## Usage
 
-Ensure the MCForecastTools.py file, gitignore file, and .env files are in the directory where you run financial_planning_tools.ipynb
-from and the user should be good to go.  The user is free to update income or emergency fund threshold as needed. The user is also
-free to change allocation percentages in the monte carlo simulations, the years we simulate, and even the tickers we look at for the
-equity, bond, or crypto holdings.
+Just open the crypto_investments notebook and run the code. User can feel free to change any k values I used if they are curious what 
+graphs will look like.
 
 That's it!
 
